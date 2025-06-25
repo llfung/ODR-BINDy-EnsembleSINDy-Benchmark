@@ -4,22 +4,29 @@
 %
 %
 
+pc = parcluster('Processes');
+pc.NumWorkers = 64;
+pc.JobStorageLocation = strcat(getenv('TMPDIR'),'/para_tmp');
+parpool(pc,64);
+
 clear all
 close all
 clc
 
 addpath(genpath('colormaps'))
 
+warning('off','MATLAB:rankDeficientMatrix');
+warning('off','MATLAB:nearlySingularMatrix');
 %% sweep over a set of noise levels and data length to generate heatmap plots
 % noise level
-epsL = 0.0:0.005:0.05;
+epsL = 0.025:0.025:0.4;
 
 % simulation time
-tEndL = 1.0:1.0:10;
+tEndL = 0.5:0.5:10;
 
 % at each noise level and simulation time, nTest different instantiations of noise are run (model errors and success rate are then averaged for plotting)
-nTest1 = 1000; % generate models nTest1 times for SINDy
-nTest2 = 1000; % generate models nTest times for ensemble SINDy
+nTest1 = 128; % generate models nTest1 times for SINDy
+nTest2 = 128; % generate models nTest times for ensemble SINDy
 
 
 %% hyperparameters
@@ -71,9 +78,9 @@ signal_power = rms(x10(:));
 %% general parameters
 
 % smooth data using golay filter 
-sgolayON = 1;
+sgolayON = 0;
 
-runSim = 0; % run sim or load data
+runSim = 1; % run sim or load data
 
 if runSim
     
@@ -82,9 +89,9 @@ if runSim
 runS = 1; % run SINDy and w-SINDy
 runE = 1; % run Ensemble on data
 runEL = 1; % run Ensemble on library
-runJK = 0; % run jackknife sampling
-runDoubleBag = 0; % run double bagging: first library then data bagging
-runWR = 0; % bagging and bragging without replacement
+runJK = 1; % run jackknife sampling
+runDoubleBag = 1; % run double bagging: first library then data bagging
+runWR = 1; % bagging and bragging without replacement
 
 saveTrue = 1;
 
@@ -141,9 +148,9 @@ if runS
 
             end
         end
-        if saveTrue
-            save(sprintf('simOutS%.0f',ieps))
-        end
+        % if saveTrue
+        %     save(sprintf('simOutS%.0f',ieps))
+        % end
     end
 
     if saveTrue
@@ -210,12 +217,13 @@ for ieps = 1:length(epsL)
 %         [weights,t,x,rhs] = lorenz(x0,tspan,tol_ode,ode_params);
         [t,x]=ode45(@(t,x) lorenz(t,x,Beta),tspan,x0,options);
 
-        dxobs_0 = zeros(size(x));
+        
         
         rng(1,'twister')
         
-        for ii = 1:nTest2
-            
+        parfor ii = 1:nTest2
+            warning('off','MATLAB:rankDeficientMatrix');
+            warning('off','MATLAB:nearlySingularMatrix');
             % add noise
             sigma = noise_ratio*signal_power;        
             noise = normrnd(0,sigma,size(x));
@@ -233,6 +241,7 @@ for ieps = 1:length(epsL)
 
             %% calculate derivatives
             % finite difference differentiation
+            dxobs_0 = zeros(size(x));
             dxobs_0(1,:)=(-11/6*xobs(1,:) + 3*xobs(2,:) -3/2*xobs(3,:) + xobs(4,:)/3)/dt;
             dxobs_0(2:size(xobs,1)-1,:) = (xobs(3:end,:)-xobs(1:end-2,:))/(2*dt);
             dxobs_0(size(xobs,1),:) = (11/6*xobs(end,:) - 3*xobs(end-1,:) + 3/2*xobs(end-2,:) - xobs(end-3,:)/3)/dt;
@@ -243,13 +252,15 @@ for ieps = 1:length(epsL)
 
 %                 bootstat = bootstrp(nEnsembles,@(Theta,dx)sparsifyDynamics(Theta,dx,lambda,n,gamma),Theta_0,dxobs_0);
                 [bootstat,bootstatn] = bootstrp(nEnsembles,@(Theta,dx)sparsifyDynamics(Theta,dx,lambda,n,gamma),Theta_0,dxobs_0); 
-
+                XiE = zeros(size(Theta_0,2),n,nEnsembles);
+                XiEnz = zeros(size(Theta_0,2),n,nEnsembles);
                 for iE = 1:nEnsembles
                     XiE(:,:,iE) = reshape(bootstat(iE,:),size(Theta_0,2),n);
                     XiEnz(:,:,iE) = XiE(:,:,iE)~=0;
                 end
 
                 % only consider ensemble members with small out of sample error
+                OOSeps = zeros(1,nEnsembles);
                 for jj = 1:nEnsembles
                     XX = [1:size(Theta_0,1), bootstatn(:,jj)'];
                     nUnique = histc(XX, unique(XX));
@@ -281,6 +292,7 @@ for ieps = 1:length(epsL)
                     nEnsembleWR1 = round(0.5*size(Theta_0,1));
                     nEnsembleWR2 = nEnsembles;
                     XiWRE = zeros(size(Theta_0,2),n,nEnsembleWR2);
+                    XiWREnz = zeros(size(Theta_0,2),n,nEnsembleWR2);
                     libOutBSWR = zeros(nEnsembleWR1,nEnsembleWR2);
                     for iii = 1:nEnsembleWR2
                         rs = RandStream('mlfg6331_64','Seed',iii); 
@@ -457,14 +469,15 @@ for ieps = 1:length(epsL)
                 end
             end
         end
+        disp([num2str(idt) ' | ' num2str(ieps)]);
     end
-    if saveTrue
-        save(sprintf('simOutE%.0f',ieps))
-    end
+    % if saveTrue
+    %     save(sprintf('simOutE%.0f',ieps))
+    % end
 end
 
 if saveTrue
-    save('simOutEFinal')
+    save('simOutEFinal');
 end
 
 end
@@ -492,4 +505,4 @@ end
 
 
 %% plot results
-plotHeatMap
+% plotHeatMap
