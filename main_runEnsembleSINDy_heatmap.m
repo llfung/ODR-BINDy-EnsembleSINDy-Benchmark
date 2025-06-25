@@ -4,10 +4,10 @@
 %
 %
 
-pc = parcluster('Processes');
-pc.NumWorkers = 64;
-pc.JobStorageLocation = strcat(getenv('TMPDIR'),'/para_tmp');
-parpool(pc,64);
+% pc = parcluster('Processes');
+% pc.NumWorkers = 64;
+% pc.JobStorageLocation = strcat(getenv('TMPDIR'),'/para_tmp');
+% parpool(pc,64);
 
 clear all
 close all
@@ -22,11 +22,11 @@ warning('off','MATLAB:nearlySingularMatrix');
 epsL = 0.025:0.025:0.4;
 
 % simulation time
-tEndL = 0.5:0.5:10;
+tEndL = 1.0:1.0:10.0;
 
 % at each noise level and simulation time, nTest different instantiations of noise are run (model errors and success rate are then averaged for plotting)
-nTest1 = 128; % generate models nTest1 times for SINDy
-nTest2 = 128; % generate models nTest times for ensemble SINDy
+nTest1 = 20; % generate models nTest1 times for SINDy
+nTest2 = 20; % generate models nTest times for ensemble SINDy
 
 
 %% hyperparameters
@@ -50,11 +50,11 @@ nEnsemblesDD = 100; % number of models in ensemble for data bagging after librar
 
 % generate synthetic Lorenz system data
 ode_params = {10, 8/3, 28}; 
-x0 = [-8 7 27]';
+x0 = [-8 8 27]';
 n = length(x0); 
 
 % set common params
-polys = 1:5;
+polys = 0:2;
 trigs = [];
 common_params = {polys,trigs};
 gamma = 0;
@@ -72,13 +72,13 @@ true_nz_weights = getTrueWeights(ode_params,common_params,n);
 % [~,~,x10,~] = lorenz(x0,dtL(1):dtL(1):10,tol_ode,ode_params);
 [~,x10]=ode45(@(t,x) lorenz(t,x,Beta),dt:dt:10,x0,options);
 
-signal_power = rms(x10(:));
+signal_power = std(x10(:));
 
 
 %% general parameters
 
 % smooth data using golay filter 
-sgolayON = 0;
+sgolayON = 1;
 
 runSim = 1; % run sim or load data
 
@@ -88,10 +88,10 @@ if runSim
 % the final heatmap plot shows SINDy (runS), baggin and bragging (runE), and library bagging (runEL and runDoubleBag)
 runS = 1; % run SINDy and w-SINDy
 runE = 1; % run Ensemble on data
-runEL = 1; % run Ensemble on library
-runJK = 1; % run jackknife sampling
-runDoubleBag = 1; % run double bagging: first library then data bagging
-runWR = 1; % bagging and bragging without replacement
+runEL = 0; % run Ensemble on library
+runJK = 0; % run jackknife sampling
+runDoubleBag = 0; % run double bagging: first library then data bagging
+runWR = 0; % bagging and bragging without replacement
 
 saveTrue = 1;
 
@@ -143,7 +143,7 @@ if runS
 
                 %% store outputs
                 nWrongTermsS(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (sindy~=0))));
-                modelErrorS(ieps,idt,ii) = norm(sindy-true_nz_weights)/norm(true_nz_weights);
+                modelErrorS(ieps,idt,ii) = norm(sindy-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                 successS(ieps,idt,ii) = norm((true_nz_weights~=0) - (sindy~=0))==0;
 
             end
@@ -426,23 +426,23 @@ for ieps = 1:length(epsL)
                 
                 nWrongTermsE(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiMedian~=0))));
                 nWrongTermsE2(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (Xi~=0))));
-                modelErrorE(ieps,idt,ii) = norm(XiMedian-true_nz_weights)/norm(true_nz_weights);
-                modelErrorE2(ieps,idt,ii) = norm(Xi-true_nz_weights)/norm(true_nz_weights);
+                modelErrorE(ieps,idt,ii) = norm(XiMedian-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
+                modelErrorE2(ieps,idt,ii) = norm(Xi-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                 successE(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiMedian~=0))==0;
                 successE2(ieps,idt,ii) = norm((true_nz_weights~=0) - (Xi~=0))==0;
                 
                 nWrongTermsEoos(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiOOS~=0))));
-                modelErrorEoos(ieps,idt,ii) = norm(XiOOS-true_nz_weights)/norm(true_nz_weights);
+                modelErrorEoos(ieps,idt,ii) = norm(XiOOS-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                 successEoos(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiOOS~=0))==0;
                 nWrongTermsEoos2(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiOOSmed~=0))));
-                modelErrorEoos2(ieps,idt,ii) = norm(XiOOSmed-true_nz_weights)/norm(true_nz_weights);
+                modelErrorEoos2(ieps,idt,ii) = norm(XiOOSmed-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                 successEoos2(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiOOSmed~=0))==0;
                 
                 if runWR
                     nWrongTermsWRE(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiWRMedian~=0))));
                     nWrongTermsWRE2(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiWR~=0))));
-                    modelErrorWRE(ieps,idt,ii) = norm(XiWRMedian-true_nz_weights)/norm(true_nz_weights);
-                    modelErrorWRE2(ieps,idt,ii) = norm(XiWR-true_nz_weights)/norm(true_nz_weights);
+                    modelErrorWRE(ieps,idt,ii) = norm(XiWRMedian-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
+                    modelErrorWRE2(ieps,idt,ii) = norm(XiWR-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                     successWRE(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiWRMedian~=0))==0;
                     successWRE2(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiWR~=0))==0;
                 end
@@ -450,14 +450,14 @@ for ieps = 1:length(epsL)
             
             if runEL
                 nWrongTermsDE(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiD~=0))));
-                modelErrorDE(ieps,idt,ii) = norm(XiD-true_nz_weights)/norm(true_nz_weights);
+                modelErrorDE(ieps,idt,ii) = norm(XiD-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                 successDE(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiD~=0))==0;
                 
                 if runDoubleBag
                     nWrongTermsDDE(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiDB~=0))));
                     nWrongTermsDDE2(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (XiDBmed~=0))));
-                    modelErrorDDE(ieps,idt,ii) = norm(XiDB-true_nz_weights)/norm(true_nz_weights);
-                    modelErrorDDE2(ieps,idt,ii) = norm(XiDBmed-true_nz_weights)/norm(true_nz_weights);
+                    modelErrorDDE(ieps,idt,ii) = norm(XiDB-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
+                    modelErrorDDE2(ieps,idt,ii) = norm(XiDBmed-true_nz_weights,"fro")/norm(true_nz_weights,"fro");
                     successDDE(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiDB~=0))==0;
                     successDDE2(ieps,idt,ii) = norm((true_nz_weights~=0) - (XiDBmed~=0))==0;
                 end
