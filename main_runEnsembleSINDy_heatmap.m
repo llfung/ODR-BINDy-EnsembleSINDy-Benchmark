@@ -54,7 +54,7 @@ x0 = [-8 8 27]';
 n = length(x0); 
 
 % set common params
-polys = 0:2;
+polys = 1:2;
 trigs = [];
 common_params = {polys,trigs};
 gamma = 0;
@@ -154,7 +154,7 @@ if runS
     end
 
     if saveTrue
-        save('simOutSFinal')
+        save('Lorenz_simOutSFinal')
     end
 end
 
@@ -477,7 +477,7 @@ for ieps = 1:length(epsL)
 end
 
 if saveTrue
-    save('simOutEFinal');
+    save('Lorenz_simOutEFinal');
 end
 
 end
