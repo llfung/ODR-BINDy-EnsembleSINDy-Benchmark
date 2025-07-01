@@ -66,7 +66,7 @@ true_nz_weights = zeros(10 ,3);
 true_nz_weights(1,:) = [      0 ,       0 , ode_params.b ];
 true_nz_weights(2,:) = [      0 ,       1 ,       0 ]; % y(1)
 true_nz_weights(3,:) = [     -1 , ode_params.a ,       0 ]; % y(2)
-true_nz_weights(4,:) = [     -1 ,       0 , ode_params.c ]; % y(3)
+true_nz_weights(4,:) = [     -1 ,       0 , -ode_params.c ]; % y(3)
 true_nz_weights(6,:) = [      0 ,       0 ,       1 ]; % y(1) * y(3)
 
 % signal power for noise calculation
