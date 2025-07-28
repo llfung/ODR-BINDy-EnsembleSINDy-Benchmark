@@ -1,21 +1,21 @@
 %% Lorenz
-load('Lorenz_simOutEFinal.mat','successE','modelErrorE','tEndL','epsL'); % With Golay
+load('Lorenz_simOutEFinal_weak.mat','successE','modelErrorE','tEndL','epsL'); % With Golay
 
-% tEndL=tEndL(2:2:end);
+tEndL=tEndL(1:end);
 success      = mean(successE(:,:,:),3)'; % Bragging SINDy
 modelError   = mean(modelErrorE(:,:,:),3)'; % Bragging SINDy
 
 save("Lorenz_E-SINDy.mat",'success','modelError','tEndL','epsL');
 %% Rossler
-load('Rossler_simOutEFinal.mat','successE','modelErrorE','tEndL','epsL'); % With Golay
+load('Rossler_simOutEFinal_weak.mat','successE','modelErrorE','tEndL','epsL'); % With Golay
 
 success      = mean(successE(:,:,:),3)'; % Bragging SINDy
 modelError   = mean(modelErrorE(:,:,:),3)'; % Bragging SINDy
 
 save("Rossler_E-SINDy.mat",'success','modelError','tEndL','epsL');
 %% Van Der Pol
-load('VanDerPol_simOutEFinal.mat','successE','modelErrorE','tEndL','epsL'); % With Golay
-
+load('VanDerPol_simOutEFinal_weak.mat','successE','modelErrorE','tEndL','epsL'); % With Golay
+tEndL=tEndL(1:end);
 success      = mean(successE(:,:,:),3)'; % Bragging SINDy
 modelError   = mean(modelErrorE(:,:,:),3)'; % Bragging SINDy
 

@@ -22,11 +22,11 @@ warning('off','MATLAB:nearlySingularMatrix');
 epsL = 0.025:0.025:0.4;
 
 % simulation time
-tEndL = 1.0:1.0:10.0;
+tEndL = 4.0:1.0:10.0;
 
 % at each noise level and simulation time, nTest different instantiations of noise are run (model errors and success rate are then averaged for plotting)
 nTest1 = 20; % generate models nTest1 times for SINDy
-nTest2 = 20; % generate models nTest times for ensemble SINDy
+nTest2 = 64; % generate models nTest times for ensemble SINDy
 
 
 %% hyperparameters
@@ -78,7 +78,7 @@ signal_power = std(x10(:));
 %% general parameters
 
 % smooth data using golay filter 
-sgolayON = 1;
+sgolayON = 0;
 
 runSim = 1; % run sim or load data
 
@@ -86,7 +86,7 @@ if runSim
     
 % choose which method(s) to run. otherwise results are loaded.
 % the final heatmap plot shows SINDy (runS), baggin and bragging (runE), and library bagging (runEL and runDoubleBag)
-runS = 1; % run SINDy and w-SINDy
+runS = 0; % run SINDy and w-SINDy
 runE = 1; % run Ensemble on data
 runEL = 0; % run Ensemble on library
 runJK = 0; % run jackknife sampling
@@ -139,7 +139,6 @@ if runS
                 %% SINDy 
                 % sindy with central difference differentiation
                 sindy = sindy_cd(xobs,Theta_0,n,lambda,gamma,dt);
-
 
                 %% store outputs
                 nWrongTermsS(ieps,idt,ii) = sum(sum(abs((true_nz_weights~=0) - (sindy~=0))));
@@ -235,17 +234,19 @@ for ieps = 1:length(epsL)
                 framelen = 5;
                 xobs = sgolayfilt(xobs,order,framelen);
             end
-
+            %% Weak 
+            [IMat,DMat] = weak(size(xobs,1),6,2,2,dt);
             %% recover dynamics
             Theta_0 = build_theta(xobs,common_params);
-
+            Theta_0=IMat*Theta_0;
             %% calculate derivatives
             % finite difference differentiation
-            dxobs_0 = zeros(size(x));
-            dxobs_0(1,:)=(-11/6*xobs(1,:) + 3*xobs(2,:) -3/2*xobs(3,:) + xobs(4,:)/3)/dt;
-            dxobs_0(2:size(xobs,1)-1,:) = (xobs(3:end,:)-xobs(1:end-2,:))/(2*dt);
-            dxobs_0(size(xobs,1),:) = (11/6*xobs(end,:) - 3*xobs(end-1,:) + 3/2*xobs(end-2,:) - xobs(end-3,:)/3)/dt;
+            % dxobs_0 = zeros(size(x));
+            % dxobs_0(1,:)=(-11/6*xobs(1,:) + 3*xobs(2,:) -3/2*xobs(3,:) + xobs(4,:)/3)/dt;
+            % dxobs_0(2:size(xobs,1)-1,:) = (xobs(3:end,:)-xobs(1:end-2,:))/(2*dt);
+            % dxobs_0(size(xobs,1),:) = (11/6*xobs(end,:) - 3*xobs(end-1,:) + 3/2*xobs(end-2,:) - xobs(end-3,:)/3)/dt;
             
+            dxobs_0=DMat*xobs;
             if runE
 
                 %% SINDy ensemble
@@ -477,7 +478,7 @@ for ieps = 1:length(epsL)
 end
 
 if saveTrue
-    save('Lorenz_simOutEFinal');
+    save('Lorenz_simOutEFinal_weak');
 end
 
 end
